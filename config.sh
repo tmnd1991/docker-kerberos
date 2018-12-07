@@ -20,6 +20,24 @@ fix_hostname() {
   sed -i "/^hosts:/ s/ *files dns/ dns files/" /etc/nsswitch.conf
 }
 
+create_kdc_conf() {
+cat > /var/kerberos/krb5kdc/kdc.conf<<EOF
+[kdcdefaults]
+ kdc_ports = 88
+ kdc_tcp_ports = 88
+
+[realms]
+ EXAMPLE.COM = {
+  #master_key_type = aes256-cts
+  max_life = 7d 0h 0m 0s
+  acl_file = /var/kerberos/krb5kdc/kadm5.acl
+  dict_file = /usr/share/dict/words
+  admin_keytab = /var/kerberos/krb5kdc/kadm5.keytab
+  supported_enctypes = aes256-cts:normal aes128-cts:normal des3-hmac-sha1:normal arcfour-hmac:normal des-hmac-sha1:normal des-cbc-md5:normal des-cbc-crc:normal
+ }
+EOF
+}
+
 create_config() {
   : ${KDC_ADDRESS:=$(hostname -f)}
 
@@ -39,6 +57,7 @@ create_config() {
 
 [realms]
  $REALM = {
+  max_life = 7d 0h 0m 0s
   kdc = $KDC_ADDRESS
   admin_server = $KDC_ADDRESS
  }
@@ -81,6 +100,7 @@ main() {
     create_config
     create_db
     create_admin_user
+    create_kdc_conf
     start_kdc
 
     touch /kerberos_initialized
